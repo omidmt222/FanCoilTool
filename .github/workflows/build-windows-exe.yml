@@ -1,0 +1,47 @@
+
+name: Build FanCoilTool EXE
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pyinstaller openpyxl
+
+      - name: Build standalone executable
+        run: python -m PyInstaller --noconfirm --clean --onefile --noconsole --name FanCoilTool fancoil_tool.py
+
+      - name: Include fan-coil database
+        shell: pwsh
+        run: Copy-Item -Path fancoil_database.xlsx -Destination dist/fancoil_database.xlsx -Force
+
+      - name: Package executable and database
+        shell: pwsh
+        run: Compress-Archive -Path dist/FanCoilTool.exe,dist/fancoil_database.xlsx -DestinationPath FanCoilTool-Windows.zip -Force
+
+      - name: Upload ready-to-use EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: FanCoilTool-Windows
+          path: FanCoilTool-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
